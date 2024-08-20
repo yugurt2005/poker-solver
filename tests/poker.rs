@@ -1,6 +1,6 @@
 use rand::{rngs::SmallRng, thread_rng, SeedableRng};
 
-use poker_solver::{interfaces::game::Game, poker::Poker, solver::solve};
+use poker_solver::{interfaces::game::Game, poker::game::Poker, solver::solve};
 
 #[test]
 fn test_poker_eval() {

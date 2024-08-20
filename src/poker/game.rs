@@ -61,6 +61,14 @@ impl State {
             return x;
         }
     }
+
+    pub fn from(cards: [u64; 2], board: [u64; 4]) -> Self {
+        Self {
+            used: 0,
+            cards,
+            board,
+        }
+    }
 }
 
 pub struct Poker {

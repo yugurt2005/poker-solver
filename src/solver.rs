@@ -1,7 +1,9 @@
-use rand::{distributions::WeightedIndex, prelude::*};
-use rayon::prelude::*;
-use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
+
+use rand::prelude::*;
+use rayon::prelude::*;
+
+use serde::{Deserialize, Serialize};
 
 use crate::interfaces::game::Game;
 
@@ -97,7 +99,7 @@ fn mccfr<Node, State>(
 
         s
     } else {
-        let action = WeightedIndex::new(
+        let action = rand::distributions::WeightedIndex::new(
             (&mut infosets[game.index(node, &state)].lock().unwrap()).use_strategy(),
         )
         .unwrap()
