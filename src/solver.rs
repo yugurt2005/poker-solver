@@ -19,6 +19,7 @@ pub fn normalize(input: Vec<f64>) -> Vec<f64> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Infoset {
+    pub c: usize,
     pub n: usize,
     pub s: Vec<f64>,
     pub r: Vec<f64>,
@@ -27,6 +28,7 @@ pub struct Infoset {
 impl Infoset {
     pub fn new(n: usize) -> Self {
         Self {
+            c: 0,
             n,
             s: vec![0.0; n],
             r: vec![0.0; n],
@@ -49,6 +51,8 @@ impl Infoset {
             self.s[i] += strategy[i];
         }
 
+        self.c += 1;
+
         strategy
     }
 
@@ -65,8 +69,6 @@ fn mccfr<Node, State>(
     infosets: &Vec<Mutex<Infoset>>,
     rng: &mut impl Rng,
 ) -> f64 {
-    // println!("{}", game.display(node, &state));
-
     if game.done(node) {
         return game.eval(node, &state);
     }

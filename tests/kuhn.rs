@@ -1,6 +1,6 @@
 use std::{fs::File, io::BufReader};
 
-use rand::{thread_rng, Rng};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use poker_solver::{

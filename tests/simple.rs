@@ -2,11 +2,12 @@ use std::{fs::File, io::BufReader};
 
 use smallvec::smallvec;
 
-use rand::Rng;
+use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use colored::*;
 
+use poker_abstraction::tables::load;
 use poker_evaluator::Evaluator;
 use poker_indexer::Indexer;
 use poker_solver::{
@@ -18,6 +19,7 @@ use poker_solver::{
 struct Node {
     i: usize,
     t: usize,
+    r: usize,
     a: char,
     h: String,
 
@@ -75,6 +77,8 @@ impl State {
 struct Mock {
     evaluator: Evaluator,
 
+    cluster: Vec<u16>,
+
     indexer: Indexer,
 
     nodes: Vec<Node>,
@@ -85,10 +89,12 @@ impl Mock {
         Self {
             evaluator: Evaluator::new("data/evaluator".to_string()),
 
-            indexer: Indexer::new(vec![2]),
+            cluster: load(&"tests/data/river-clusters.bin".to_string()),
+
+            indexer: Indexer::new(vec![2, 5]),
 
             nodes: serde_json::from_reader(BufReader::new(
-                File::open("tests/data/hand-tree.json").unwrap(),
+                File::open("tests/data/simple-tree.json").unwrap(),
             ))
             .unwrap(),
         }
@@ -120,14 +126,25 @@ impl Game<Node, State> for Mock {
         let n = self
             .nodes
             .iter()
-            .map(|node| if node.x.len() > 0 { 169 } else { 0 })
+            .map(|node| {
+                if node.x.len() > 0 {
+                    if node.r == 0 {
+                        169
+                    } else {
+                        2197
+                    }
+                } else {
+                    0
+                }
+            })
             .sum();
 
         let mut answer = vec![0; n];
 
         for node in &self.nodes {
             if node.x.len() > 0 {
-                for i in 0..169 {
+                let k = if node.r == 0 { 169 } else { 2197 };
+                for i in 0..k {
                     answer[node.i + i] = node.x.len();
                 }
             }
@@ -163,7 +180,15 @@ impl Game<Node, State> for Mock {
     }
 
     fn index(&self, node: &Node, state: &State) -> usize {
-        node.i + self.indexer.index(smallvec![state.cards[node.t]]) as usize
+        node.i
+            + if node.r == 0 {
+                self.indexer.index(smallvec![state.cards[node.t]]) as usize
+            } else {
+                self.cluster[self
+                    .indexer
+                    .index(smallvec![state.cards[node.t], state.board])
+                    as usize] as usize
+            }
     }
 
     fn display(&self, node: &Node, state: &State) -> String {
@@ -201,9 +226,45 @@ fn test_size() {
 
     let sizes = game.size();
 
-    assert_eq!(sizes.len(), 169 * 4);
+    assert_eq!(sizes.len(), 169 * 4 + 2197 * 3 * 4);
     for size in sizes {
         assert_eq!(size, 2);
+    }
+}
+
+#[test]
+fn test_solve() {
+    let game = Mock::new();
+
+    let infosets = solve(1000000, 42, &game);
+
+    let mut node = game.root();
+    node = game.play(node, 0);
+    node = game.play(node, 0);
+
+    let mut rng = SmallRng::seed_from_u64(42);
+
+    for _ in 0..50 {
+        let index = rng.gen_range(0..game.indexer.count[1]);
+        let input = game.indexer.unindex(index, 1);
+
+        let cards = input[0];
+        let board = input[1];
+
+        let state = State::from([cards, cards], board);
+
+        let i = game.index(node, &state);
+
+        println!(
+            "{}: [{}] ({})",
+            game.display(node, &state),
+            normalize(infosets[i].s.clone())
+                .into_iter()
+                .map(|x| format!("{:.2}", x))
+                .collect::<Vec<String>>()
+                .join(" "),
+            infosets[i].c
+        );
     }
 }
 
@@ -211,7 +272,7 @@ fn test_size() {
 fn test_solve_pre() {
     let game = Mock::new();
 
-    let infosets = solve(3000000, 42, &game);
+    let infosets = solve(1000000, 420, &game);
 
     let mut matrix = vec![vec![vec![0.0; 13]; 13]; 2];
 
@@ -220,7 +281,9 @@ fn test_solve_pre() {
             let a_card = 1 << a;
             let b_card = 1 << b << if a <= b { 13 } else { 0 };
 
-            let i = 169 + game.indexer.index(smallvec![a_card | b_card]) as usize;
+            let node = game.root();
+
+            let i = game.index(node, &State::from([a_card | b_card; 2], 0));
 
             let s = normalize(infosets[i].s.clone());
             matrix[0][a][b] = s[0];

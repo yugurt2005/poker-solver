@@ -71,31 +71,34 @@ impl State {
     }
 }
 
-struct River {
+struct Mock {
     evaluator: Evaluator,
 
-    clusters: Vec<u16>,
-
     indexer: Indexer,
+
+    cluster: Vec<u16>,
 
     nodes: Vec<Node>,
 }
 
-impl River {
-    pub fn new(path: String) -> Self {
+impl Mock {
+    pub fn new() -> Self {
         Self {
             evaluator: Evaluator::new("data/evaluator".to_string()),
 
-            clusters: load(&"tests/data/river-clusters.bin".to_string()),
-
             indexer: Indexer::new(vec![2, 5]),
 
-            nodes: serde_json::from_reader(BufReader::new(File::open(path).unwrap())).unwrap(),
+            cluster: load(&"tests/data/river-clusters.bin".to_string()),
+
+            nodes: serde_json::from_reader(BufReader::new(
+                File::open("tests/data/river-tree.json").unwrap(),
+            ))
+            .unwrap(),
         }
     }
 }
 
-impl Game<Node, State> for River {
+impl Game<Node, State> for Mock {
     fn done(&self, node: &Node) -> bool {
         node.x.is_empty()
     }
@@ -163,12 +166,8 @@ impl Game<Node, State> for River {
     }
 
     fn index(&self, node: &Node, state: &State) -> usize {
-        if node.x.is_empty() {
-            panic!("invalid input");
-        }
-
         node.i
-            + self.clusters[self
+            + self.cluster[self
                 .indexer
                 .index(smallvec![state.cards[node.t], state.board])
                 as usize] as usize
@@ -205,7 +204,7 @@ impl Game<Node, State> for River {
 
 #[test]
 fn test_size() {
-    let game = River::new("tests/data/river-tree.json".to_string());
+    let game = Mock::new();
 
     let sizes = game.size();
 
@@ -217,7 +216,7 @@ fn test_size() {
 
 #[test]
 fn test_solve() {
-    let game = River::new("tests/data/river-tree.json".to_string());
+    let game = Mock::new();
 
     let infosets = solve(1000000, 42, &game);
 
