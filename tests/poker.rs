@@ -1,6 +1,6 @@
 use rand::{rngs::SmallRng, thread_rng, SeedableRng};
 
-use poker_solver::{interfaces::game::Game, poker::game::Poker, solver::solve};
+use poker_solver::{interfaces::game::Game, poker::game::Poker};
 
 #[test]
 fn test_poker_eval() {
@@ -13,6 +13,7 @@ fn test_poker_eval() {
     let mut node = game.root();
     for action in actions {
         node = game.play(node, action);
+        println!("{} {:?}", node.h, node.s);
     }
 
     println!("{}", node.h);
@@ -86,9 +87,4 @@ fn test_poker_eval_2() {
     let expect = 6000.0;
 
     assert_eq!(actual, expect);
-}
-
-#[test]
-fn test_poker_mccfr() {
-    solve(1, 42, &Poker::new("data/abstraction/".to_string()));
 }
