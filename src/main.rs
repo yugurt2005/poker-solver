@@ -10,26 +10,26 @@ use poker_solver::{
 fn main() {
     let game = Poker::new("data/abstraction/".to_string());
 
-    let start = std::time::Instant::now();
+    // let start = std::time::Instant::now();
 
-    let data = solve(100000000, 420, &game);
+    // let data = solve(100000000, 420, &game);
 
-    println!("Elapsed: {:?}", start.elapsed());
+    // println!("Elapsed: {:?}", start.elapsed());
 
-    let buffer = bincode::serialize(&data).unwrap();
-    std::fs::File::create("data/solution.bin".to_string())
-        .unwrap()
-        .write_all(&buffer)
-        .unwrap();
-
-    // let mut buffer = Vec::new();
-
-    // std::fs::File::open("data/solution.bin".to_string())
+    // let buffer = bincode::serialize(&data).unwrap();
+    // std::fs::File::create("data/solution.bin".to_string())
     //     .unwrap()
-    //     .read_to_end(&mut buffer)
+    //     .write_all(&buffer)
     //     .unwrap();
 
-    // let infosets: Vec<Infoset> = bincode::deserialize(&buffer).unwrap();
+    let mut buffer = Vec::new();
+
+    std::fs::File::open("data/solution.bin".to_string())
+        .unwrap()
+        .read_to_end(&mut buffer)
+        .unwrap();
+
+    let infosets: Vec<Infoset> = bincode::deserialize(&buffer).unwrap();
 
     // let mut board = [0, 1 << 6 | 1 << 3 | 1 << 34, 1 << 8, 1 << 39];
     // for i in 1..4 {
@@ -63,30 +63,31 @@ fn main() {
     //     let action = actions[i];
 
     //     node = game.play(node, action);
-
     // }
 
-    // let indexer = Indexer::new(vec![2, 3]);
+    let indexer = Indexer::new(vec![2, 3]);
 
-    // let mut node = game.root();
-    // node = game.play(node, 1);
-    // node = game.play(node, 0);
+    let mut node = game.root();
+    node = game.play(node, 1);
+    node = game.play(node, 2);
     // node = game.play(node, 2);
     // node = game.play(node, 2);
 
-    // let cards = [1 << 12 | 1, 1 << 17 | 1 << 10 | 1 << 5];
+    for i in 0..169 {
+        let cards = indexer.unindex(i, 0);
 
-    // let state = State::from([cards[0], cards[0]], [0, cards[1], 0, 0]);
+        let state = State::from([cards[0], cards[0]], [0, 0, 0, 0]);
 
-    // let infoset = &infosets[game.index(node, &state)];
+        let infoset = &infosets[game.index(node, &state)];
 
-    // println!(
-    //     "{}: [{:?}]",
-    //     game.display(node, &State::from([cards[0], 0], [0, cards[1], 0, 0])),
-    //     normalize(infoset.s.clone())
-    //         .into_iter()
-    //         .map(|x| format!("{:.2}", x))
-    //         .collect::<Vec<String>>()
-    //         .join(" ")
-    // );
+        println!(
+            "{}: [{:?}]",
+            game.display(node, &State::from([cards[0], 0], [0, 0, 0, 0])),
+            normalize(infoset.s.clone())
+                .into_iter()
+                .map(|x| format!("{:.2}", x))
+                .collect::<Vec<String>>()
+                .join(" ")
+        );
+    }
 }

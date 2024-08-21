@@ -135,6 +135,7 @@ name = "poker-solver"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "colored",
  "poker_abstraction",
  "poker_evaluator",
  "poker_indexer",

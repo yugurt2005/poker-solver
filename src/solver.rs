@@ -25,11 +25,11 @@ pub struct Infoset {
 }
 
 impl Infoset {
-    pub fn new(size: usize) -> Self {
+    pub fn new(n: usize) -> Self {
         Self {
-            n: size,
-            s: vec![0.0; size],
-            r: vec![0.0; size],
+            n,
+            s: vec![0.0; n],
+            r: vec![0.0; n],
         }
     }
 
@@ -76,7 +76,7 @@ fn mccfr<Node, State>(
 
         let mut u = Vec::with_capacity(n);
         for i in 0..n {
-            u.push(-mccfr(
+            u.push(mccfr(
                 player,
                 state,
                 game.play(node, i),
@@ -93,8 +93,10 @@ fn mccfr<Node, State>(
             .zip(infoset.get_strategy())
             .fold(0.0, |acc, (x, p)| acc + x * p);
 
+        let who = if game.turn(node) == 0 { 1.0 } else { -1.0 };
+
         for i in 0..n {
-            infoset.update_regret(i, u[i] - s);
+            infoset.update_regret(i, (u[i] - s) * who);
         }
 
         s
@@ -105,7 +107,7 @@ fn mccfr<Node, State>(
         .unwrap()
         .sample(rng);
 
-        -mccfr(player, state, game.play(node, action), game, infosets, rng)
+        mccfr(player, state, game.play(node, action), game, infosets, rng)
     }
 }
 

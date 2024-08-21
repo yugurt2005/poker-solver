@@ -1,50 +1,50 @@
+use std::{fs::File, io::BufReader};
+
+use smallvec::smallvec;
+
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
-use smallvec::smallvec;
-use std::{fs::File, io::BufReader};
 
 use poker_abstraction::tables::load;
 use poker_evaluator::Evaluator;
 use poker_indexer::Indexer;
-
-use crate::interfaces::game::Game;
-
-const CLUSTERS: [usize; 4] = [169, 2197, 2197, 2197];
+use poker_solver::{
+    interfaces::game::Game,
+    solver::{normalize, solve},
+};
 
 #[derive(Serialize, Deserialize)]
-pub struct Node {
-    pub i: usize,
-    pub t: u8,
-    pub r: u8,
-    pub a: char,
-    pub h: String,
+struct Node {
+    i: usize,
+    t: usize,
+    a: char,
+    h: String,
 
-    pub s: [i32; 2],
+    s: [i8; 2],
 
-    children: Vec<usize>,
+    x: Vec<usize>,
 }
 
 #[derive(Clone)]
-pub struct State {
+struct State {
     used: u64,
     cards: [u64; 2],
-    board: [u64; 4],
+    board: u64,
 }
 
 impl State {
     pub fn new(rng: &mut impl Rng) -> Self {
         let mut state = Self {
             used: 0,
-            cards: [rng.gen(), rng.gen()],
-            board: [0; 4],
+            cards: [0, 0],
+            board: 0,
         };
 
         state.cards[0] = state.gen(rng) | state.gen(rng);
         state.cards[1] = state.gen(rng) | state.gen(rng);
 
-        state.board[1] = state.gen(rng) | state.gen(rng) | state.gen(rng);
-        state.board[2] = state.gen(rng) | state.board[1];
-        state.board[3] = state.gen(rng) | state.board[2];
+        state.board =
+            state.gen(rng) | state.gen(rng) | state.gen(rng) | state.gen(rng) | state.gen(rng);
 
         state
     }
@@ -62,7 +62,7 @@ impl State {
         }
     }
 
-    pub fn from(cards: [u64; 2], board: [u64; 4]) -> Self {
+    pub fn from(cards: [u64; 2], board: u64) -> Self {
         Self {
             used: 0,
             cards,
@@ -71,54 +71,41 @@ impl State {
     }
 }
 
-pub struct Poker {
+struct River {
     evaluator: Evaluator,
 
-    cluster_1: Vec<u16>,
-    cluster_2: Vec<u16>,
-    cluster_3: Vec<u16>,
+    clusters: Vec<u16>,
 
-    indexer_0: Indexer,
-    indexer_1: Indexer,
-    indexer_2: Indexer,
-    indexer_3: Indexer,
+    indexer: Indexer,
 
     nodes: Vec<Node>,
 }
 
-impl Poker {
+impl River {
     pub fn new(path: String) -> Self {
         Self {
             evaluator: Evaluator::new("data/evaluator".to_string()),
 
-            cluster_1: load(&(path.clone() + "cluster_1.bin")),
-            cluster_2: load(&(path.clone() + "cluster_2.bin")),
-            cluster_3: load(&(path.clone() + "cluster_3.bin")),
+            clusters: load(&"tests/data/river-clusters.bin".to_string()),
 
-            indexer_0: Indexer::new(vec![2, 0]),
-            indexer_1: Indexer::new(vec![2, 3]),
-            indexer_2: Indexer::new(vec![2, 4]),
-            indexer_3: Indexer::new(vec![2, 5]),
+            indexer: Indexer::new(vec![2, 5]),
 
-            nodes: serde_json::from_reader(BufReader::new(
-                File::open(path + "action-tree.json").unwrap(),
-            ))
-            .unwrap(),
+            nodes: serde_json::from_reader(BufReader::new(File::open(path).unwrap())).unwrap(),
         }
     }
 }
 
-impl Game<Node, State> for Poker {
+impl Game<Node, State> for River {
     fn done(&self, node: &Node) -> bool {
-        node.children.is_empty()
+        node.x.is_empty()
     }
 
     fn turn(&self, node: &Node) -> usize {
-        node.t as usize
+        node.t
     }
 
     fn next(&self, node: &Node) -> usize {
-        node.children.len()
+        node.x.len()
     }
 
     fn init(&self, rng: &mut impl Rng) -> State {
@@ -133,21 +120,15 @@ impl Game<Node, State> for Poker {
         let n = self
             .nodes
             .iter()
-            .map(|node| {
-                if node.children.len() > 0 {
-                    CLUSTERS[node.r as usize]
-                } else {
-                    0
-                }
-            })
+            .map(|node| if node.x.len() > 0 { 2197 } else { 0 })
             .sum();
 
         let mut answer = vec![0; n];
 
         for node in &self.nodes {
-            if node.children.len() > 0 {
-                for i in 0..CLUSTERS[node.r as usize] {
-                    answer[node.i + i] = node.children.len();
+            if node.x.len() > 0 {
+                for i in 0..2197 {
+                    answer[node.i + i] = node.x.len();
                 }
             }
         }
@@ -156,14 +137,14 @@ impl Game<Node, State> for Poker {
     }
 
     fn eval(&self, node: &Node, state: &State) -> f64 {
-        let me = (node.t ^ 0) as usize;
-        let op = (node.t ^ 1) as usize;
+        let me = node.t ^ 0;
+        let op = node.t ^ 1;
 
         if node.a == 'f' {
             (node.s[op] * if me == 0 { 1 } else { -1 }) as f64
         } else {
-            let me_score = self.evaluator.evaluate(state.cards[0] | state.board[3]);
-            let op_score = self.evaluator.evaluate(state.cards[1] | state.board[3]);
+            let me_score = self.evaluator.evaluate(state.cards[0] | state.board);
+            let op_score = self.evaluator.evaluate(state.cards[1] | state.board);
 
             if me_score < op_score {
                 return node.s[op] as f64;
@@ -178,19 +159,19 @@ impl Game<Node, State> for Poker {
     }
 
     fn play(&self, node: &Node, action: usize) -> &Node {
-        &self.nodes[node.children[action]]
+        &self.nodes[node.x[action]]
     }
 
     fn index(&self, node: &Node, state: &State) -> usize {
-        let input = smallvec![state.cards[node.t as usize], state.board[node.r as usize]];
+        if node.x.is_empty() {
+            panic!("invalid input");
+        }
+
         node.i
-            + match node.r {
-                0 => self.indexer_0.index(input) as usize,
-                1 => self.cluster_1[self.indexer_1.index(input) as usize] as usize,
-                2 => self.cluster_2[self.indexer_2.index(input) as usize] as usize,
-                3 => self.cluster_3[self.indexer_3.index(input) as usize] as usize,
-                _ => panic!("not possible"),
-            }
+            + self.clusters[self
+                .indexer
+                .index(smallvec![state.cards[node.t], state.board])
+                as usize] as usize
     }
 
     fn display(&self, node: &Node, state: &State) -> String {
@@ -202,7 +183,7 @@ impl Game<Node, State> for Poker {
 
         let mut res = String::new();
 
-        let deal = [state.cards[0], state.cards[1], state.board[node.r as usize]];
+        let deal = [state.cards[0], state.cards[1], state.board];
         for mut cards in deal {
             while cards != 0 {
                 let card = 63 - cards.leading_zeros();
@@ -219,5 +200,49 @@ impl Game<Node, State> for Poker {
         res += &format!("{} ({})", node.h, node.t);
 
         res
+    }
+}
+
+#[test]
+fn test_size() {
+    let game = River::new("tests/data/river-tree.json".to_string());
+
+    let sizes = game.size();
+
+    assert_eq!(sizes.len(), 2197 * 4);
+    for size in sizes {
+        assert_eq!(size, 2);
+    }
+}
+
+#[test]
+fn test_solve() {
+    let game = River::new("tests/data/river-tree.json".to_string());
+
+    let infosets = solve(1000000, 42, &game);
+
+    let mut rng = SmallRng::seed_from_u64(42);
+    for _ in 0..50 {
+        let index = rng.gen_range(0..game.indexer.count[1]);
+        let input = game.indexer.unindex(index, 1);
+
+        let cards = input[0];
+        let board = input[1];
+
+        let state = State::from([cards, cards], board);
+
+        let node = game.root();
+
+        println!(
+            "({}) {}: [{}] -> evaluation: {}",
+            index,
+            game.display(node, &state),
+            normalize(infosets[game.index(node, &state)].s.clone())
+                .into_iter()
+                .map(|x| format!("{:.2}", x))
+                .collect::<Vec<String>>()
+                .join(" "),
+            game.evaluator.evaluate(cards | board)
+        );
     }
 }

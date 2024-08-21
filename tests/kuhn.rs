@@ -94,10 +94,10 @@ impl Game<Node, State> for Kuhn {
         let op = node.t ^ 1;
 
         (if node.a == 'f' {
-            node.s[op]
+            node.s[op] * if me == 0 { 1 } else { -1 }
         } else {
             // showdown
-            if state.cards[me] > state.cards[op] {
+            if state.cards[0] > state.cards[1] {
                 node.s[op]
             } else {
                 -node.s[me]
@@ -140,7 +140,7 @@ fn display(mut index: usize, kuhn: &Kuhn) -> String {
 
 #[test]
 fn test_khun_tree() {
-    let game = Kuhn::new("tests/kuhn-tree.json".to_string());
+    let game = Kuhn::new("tests/data/kuhn-tree.json".to_string());
 
     let states = vec![
         State { cards: [0, 0] },
@@ -165,7 +165,7 @@ fn test_khun_tree() {
 
 #[test]
 fn test_khun_size() {
-    let game = Kuhn::new("tests/kuhn-tree.json".to_string());
+    let game = Kuhn::new("tests/data/kuhn-tree.json".to_string());
 
     let sizes = game.size();
 
@@ -176,14 +176,10 @@ fn test_khun_size() {
 }
 
 #[test]
-fn test_khun_mccfr() {
-    let game = Kuhn::new("tests/kuhn-tree.json".to_string());
+fn test_khun_solve() {
+    let game = Kuhn::new("tests/data/kuhn-tree.json".to_string());
 
-    let infosets = solve(
-        100000,
-        42,
-        &game,
-    );
+    let infosets = solve(100000, 42, &game);
 
     for i in 0..infosets.len() {
         let infoset = infosets[i].clone();
