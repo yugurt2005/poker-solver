@@ -11,7 +11,7 @@ use crate::interfaces::game::Game;
 
 const CLUSTERS: [usize; 4] = [169, 2197, 2197, 2197];
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Node {
     pub i: usize,
     pub t: u8,
@@ -21,7 +21,7 @@ pub struct Node {
 
     pub s: [i32; 2],
 
-    children: Vec<usize>,
+    pub children: Vec<usize>,
 }
 
 #[derive(Clone)]
