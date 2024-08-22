@@ -101,7 +101,7 @@ impl Poker {
             indexer_3: Indexer::new(vec![2, 5]),
 
             nodes: serde_json::from_reader(BufReader::new(
-                File::open(path + "action-tree.json").unwrap(),
+                File::open(path + "poker-tree.json").unwrap(),
             ))
             .unwrap(),
         }

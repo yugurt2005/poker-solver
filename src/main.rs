@@ -12,26 +12,26 @@ use poker_solver::{
 fn main() {
     let game = Poker::new("data/abstraction/".to_string());
 
-    // let start = std::time::Instant::now();
+    let start = std::time::Instant::now();
 
-    // let data = solve(1000000000, 420, &game);
+    let data = solve(1000000000, 420, &game);
 
-    // println!("Elapsed: {:?}", start.elapsed());
+    println!("Elapsed: {:?}", start.elapsed());
 
-    // let buffer = bincode::serialize(&data).unwrap();
-    // std::fs::File::create("data/solution.bin".to_string())
-    //     .unwrap()
-    //     .write_all(&buffer)
-    //     .unwrap();
-
-    let mut buffer = Vec::new();
-
-    std::fs::File::open("data/solution.bin".to_string())
+    let buffer = bincode::serialize(&data).unwrap();
+    std::fs::File::create("data/solution.bin".to_string())
         .unwrap()
-        .read_to_end(&mut buffer)
+        .write_all(&buffer)
         .unwrap();
 
-    let infosets: Vec<Infoset> = bincode::deserialize(&buffer).unwrap();
+    // let mut buffer = Vec::new();
+
+    // std::fs::File::open("data/solution.bin".to_string())
+    //     .unwrap()
+    //     .read_to_end(&mut buffer)
+    //     .unwrap();
+
+    // let infosets: Vec<Infoset> = bincode::deserialize(&buffer).unwrap();
 
     // let mut board = [0, 1 << 6 | 1 << 3 | 1 << 34, 1 << 8, 1 << 39];
     // for i in 1..4 {
@@ -93,64 +93,64 @@ fn main() {
     //     );
     // }
 
-    let node = game.root();
-    let node = game.play(node, 3);
+    // let node = game.root();
+    // let node = game.play(node, 3);
     // let node = game.play(node, 3);
     // let node = game.play(node, 3);
     // let node = game.play(node, 1);
 
-    println!("{}: {} {:?}", node.h, node.r, node.s);
+    // println!("{}: {} {:?}", node.h, node.r, node.s);
 
-    let mut board = [0, 1 << 6 | 1 << 3 | 1 << 34, 1 << 8, 1 << 39];
-    for i in 1..4 {
-        board[i] |= board[i - 1];
-    }
+    // let mut board = [0, 1 << 6 | 1 << 3 | 1 << 34, 1 << 8, 1 << 39];
+    // for i in 1..4 {
+    //     board[i] |= board[i - 1];
+    // }
 
 
-    let mut matrix = vec![vec![vec![0.0; 13]; 13]; node.children.len()];
-    for a in 0..13 {
-        for b in 0..13 {
-            let a_card = 1 << a;
-            let b_card = 1 << b << if a < b { 0 } else { 13 };
+    // let mut matrix = vec![vec![vec![0.0; 13]; 13]; node.children.len()];
+    // for a in 0..13 {
+    //     for b in 0..13 {
+    //         let a_card = 1 << a;
+    //         let b_card = 1 << b << if a < b { 0 } else { 13 };
 
-            let i = game.index(node, &State::from([a_card | b_card, a_card | b_card], board));
+    //         let i = game.index(node, &State::from([a_card | b_card, a_card | b_card], board));
 
-            let s = normalize(infosets[i].s.clone());
+    //         let s = normalize(infosets[i].s.clone());
 
-            for i in 0..matrix.len() {
-                matrix[i][a][b] = s[i];
-            }
-        }
-    }
+    //         for i in 0..matrix.len() {
+    //             matrix[i][a][b] = s[i];
+    //         }
+    //     }
+    // }
 
-    let display = |matrix: &Vec<Vec<f64>>| {
-        let mut res = String::new();
+    // let display = |matrix: &Vec<Vec<f64>>| {
+    //     let mut res = String::new();
 
-        for row in 0..13 {
-            for col in 0..13 {
-                let s = &format!("{:.2} ", matrix[row][col]);
+    //     for row in 0..13 {
+    //         for col in 0..13 {
+    //             let s = &format!("{:.2} ", matrix[row][col]);
 
-                if matrix[row][col] > 0.5 {
-                    res += &s.green().to_string();
-                    continue;
-                }
+    //             if matrix[row][col] > 0.5 {
+    //                 res += &s.green().to_string();
+    //                 continue;
+    //             }
 
-                if matrix[row][col] < 0.1 {
-                    res += &s.red().to_string();
-                    continue;
-                }
+    //             if matrix[row][col] < 0.1 {
+    //                 res += &s.red().to_string();
+    //                 continue;
+    //             }
 
-                res += s;
-            }
-            res += "\n";
-        }
+    //             res += s;
+    //         }
+    //         res += "\n";
+    //     }
 
-        res
-    };
+    //     res
+    // };
 
-    println!("{}", game.display(node, &State::from([0, 0], board)));
+    // println!("{}", game.display(node, &State::from([0, 0], board)));
 
-    for (i, x) in matrix.into_iter().enumerate() {
-        println!("{:?}:\n{}", game.play(node, i).s, display(&x));
-    }
+    // for (i, x) in matrix.into_iter().enumerate() {
+    //     println!("{:?}:\n{}", game.play(node, i).s, display(&x));
+    // }
 }
