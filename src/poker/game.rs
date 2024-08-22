@@ -21,7 +21,7 @@ pub struct Node {
 
     pub s: [i32; 2],
 
-    pub children: Vec<usize>,
+    pub c: Vec<usize>,
 }
 
 #[derive(Clone)]
@@ -89,6 +89,11 @@ pub struct Poker {
 impl Poker {
     pub fn new(path: String) -> Self {
         Self {
+            nodes: serde_json::from_reader(BufReader::new(
+                File::open(path.clone() + "poker-tree.json").unwrap(),
+            ))
+            .unwrap(),
+
             evaluator: Evaluator::new("data/evaluator".to_string()),
 
             cluster_1: load(&(path.clone() + "cluster_1.bin")),
@@ -99,18 +104,13 @@ impl Poker {
             indexer_1: Indexer::new(vec![2, 3]),
             indexer_2: Indexer::new(vec![2, 4]),
             indexer_3: Indexer::new(vec![2, 5]),
-
-            nodes: serde_json::from_reader(BufReader::new(
-                File::open(path + "poker-tree.json").unwrap(),
-            ))
-            .unwrap(),
         }
     }
 }
 
 impl Game<Node, State> for Poker {
     fn done(&self, node: &Node) -> bool {
-        node.children.is_empty()
+        node.c.is_empty()
     }
 
     fn turn(&self, node: &Node) -> usize {
@@ -118,7 +118,7 @@ impl Game<Node, State> for Poker {
     }
 
     fn next(&self, node: &Node) -> usize {
-        node.children.len()
+        node.c.len()
     }
 
     fn init(&self, rng: &mut impl Rng) -> State {
@@ -126,7 +126,7 @@ impl Game<Node, State> for Poker {
     }
 
     fn root(&self) -> &Node {
-        &self.nodes[0]
+        self.nodes.last().unwrap()
     }
 
     fn size(&self) -> Vec<usize> {
@@ -134,7 +134,7 @@ impl Game<Node, State> for Poker {
             .nodes
             .iter()
             .map(|node| {
-                if node.children.len() > 0 {
+                if node.c.len() > 0 {
                     CLUSTERS[node.r as usize]
                 } else {
                     0
@@ -145,9 +145,9 @@ impl Game<Node, State> for Poker {
         let mut answer = vec![0; n];
 
         for node in &self.nodes {
-            if node.children.len() > 0 {
+            if node.c.len() > 0 {
                 for i in 0..CLUSTERS[node.r as usize] {
-                    answer[node.i + i] = node.children.len();
+                    answer[node.i + i] = node.c.len();
                 }
             }
         }
@@ -178,7 +178,7 @@ impl Game<Node, State> for Poker {
     }
 
     fn play(&self, node: &Node, action: usize) -> &Node {
-        &self.nodes[node.children[action]]
+        &self.nodes[node.c[action]]
     }
 
     fn index(&self, node: &Node, state: &State) -> usize {

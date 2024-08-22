@@ -14,7 +14,7 @@ fn main() {
 
     let start = std::time::Instant::now();
 
-    let data = solve(1000000000, 420, &game);
+    let data = solve(2000000000, 420, &game);
 
     println!("Elapsed: {:?}", start.elapsed());
 

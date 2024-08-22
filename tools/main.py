@@ -46,6 +46,8 @@ def add(k, r, action, history, s0, s1, children=[]):
 def dfs(k, r, action, history, s0, s1, amount):
     history += action
 
+    print(history, k, s0, s1, amount)
+
     assert amount >= 0
     assert s0 <= STACK
     assert s1 <= STACK
@@ -53,10 +55,10 @@ def dfs(k, r, action, history, s0, s1, amount):
     assert s1 > 0
 
     if action == "f":
-        return add(r, k, action, history, s0, s1)
+        return add(k, r, action, history, s0, s1)
 
     if action == "c" and (r > 3 or (s0 == STACK and s1 == STACK)):
-        return add(r, k, action, history, s0, s1)
+        return add(k, r, action, history, s0, s1)
 
     children = []
 
@@ -74,7 +76,7 @@ def dfs(k, r, action, history, s0, s1, amount):
             children.append(dfs(0, r + 1, "c", history, x0, x1, 0))
 
         # raise
-        for x in [x * 2 * BLIND for x in [2, 4, 8, 16]]:
+        for x in [x * 2 * BLIND for x in [2, 3, 5, 8, 12, 17, 23]]:
             x0 = x if k % 2 == 0 else s0
             x1 = x if k % 2 == 1 else s1
 
@@ -83,7 +85,22 @@ def dfs(k, r, action, history, s0, s1, amount):
                     dfs(k + 1, r, "x", history, x0, x1, x0 - s0 + x1 - s1 - amount)
                 )
 
-        return add(k, r, action, history, s0, s1, children)
+        # a = max(BLIND, amount)
+
+        # x0 = s0 + a * 2 + amount if k % 2 == 0 else s0
+        # x1 = s1 + a * 2 + amount if k % 2 == 1 else s1
+
+        # if max(x0, x1) <= STACK // 2 and a * 2 >= amount:
+        #     children.append(dfs(k + 1, r, "x", history, x0, x1, a * 2))
+
+        # all-in
+        if action != "a":
+            x0 = STACK if k % 2 == 0 else s0
+            x1 = STACK if k % 2 == 1 else s1
+
+            children.append(
+                dfs(k + 1, r, "a", history, x0, x1, x0 - s0 + x1 - s1 - amount)
+            )
 
     else:
         # fold
@@ -120,16 +137,19 @@ def dfs(k, r, action, history, s0, s1, amount):
             if max(x0, x1) <= STACK // 2:
                 children.append(dfs(k + 1, r, "x", history, x0, x1, amount * 2))
 
-    # all-in
-    if action != "a":
-        x0 = STACK if k % 2 == 1 else s0
-        x1 = STACK if k % 2 == 0 else s1
-        children.append(dfs(k + 1, r, "a", history, x0, x1, x0 - s0 + x1 - s1 - amount))
+        # all-in
+        if action != "a":
+            x0 = STACK if k % 2 == 1 else s0
+            x1 = STACK if k % 2 == 0 else s1
+
+            children.append(
+                dfs(k + 1, r, "a", history, x0, x1, x0 - s0 + x1 - s1 - amount)
+            )
 
     return add(k, r, action, history, s0, s1, children)
 
 
-dfs(0, 0, "", "", BLIND, BLIND + BLIND, BLIND)
+dfs(0, 0, ".", "", BLIND, BLIND + BLIND, BLIND)
 
 index = 0
 

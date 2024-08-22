@@ -69,6 +69,8 @@ fn mccfr<Node, State>(
     infosets: &Vec<Mutex<Infoset>>,
     rng: &mut impl Rng,
 ) -> f64 {
+    // println!("{}", game.display(node, state));
+
     if game.done(node) {
         return game.eval(node, &state);
     }
